@@ -7,7 +7,8 @@ class AsyncBeeper:
         self.freq,self.dur_msec = freq,int(dur*1000)
         self.sample_rate = 44100
 
-        t = np.linspace(0, dur, dur * (1+self.sample_rate), False)
+        t = np.linspace(0, dur, int(dur*self.sample_rate), False)
+        # t = np.linspace(0, dur,  num=(1+self.sample_rate), endpoint=True)
         self.raw = np.sin(freq * t * 2 * np.pi)
         if trim2Zero: self.cutBack2Zero()
         print(len(t),len(self.raw),t[0],self.raw[-1])
@@ -83,17 +84,19 @@ def test2(fMin=300,fMax=3000,nSample=10):
     print(len(freqs))
     bm = BeeperManager(freqs,dur=0.15,trim2Zero=True)
     t0 = time()
-    # bm.playAll()
+    bm.playAll()
     bm.playi(11).play_obj.wait_done()
-    bm.playi(5).play_obj.wait_done()
+    # bm.playi(5).play_obj.wait_done()
+    bm.playi(0).play_obj.wait_done()
     print('dt = ', time()-t0)
 
 def test3():
-    bm = BeeperManager().setAllBeepers(fMin=300, fMax=3000, nSample=10, dur=0.05, trim2Zero=True)
+    bm = BeeperManager().setAllBeepers(fMin=300, fMax=3000, nSample=20, dur=0.05, trim2Zero=True)
     t0 = time()
-    bm.playi(11).play_obj.wait_done()
-    bm.playi(5).play_obj.wait_done()
-    print('dt = ', time()-t0)
+    for i in range(10):
+        bm.playi(11).play_obj.wait_done()
+        bm.playi(5)
+    print('fps = ', 1/(time()-t0)*20)
 if __name__ == '__main__':
     # AsyncBeeper(440,0.25).play_sync()
-    test3()
+    test2()

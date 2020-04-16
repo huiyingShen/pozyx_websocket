@@ -1,34 +1,30 @@
-
 from time import time,sleep
-import winsound
+import numpy as np
+import cv2
+from multiprocessing import Process
 
-from pypozyx import SensorData, SingleRegister, POZYX_SUCCESS, get_first_pozyx_serial_port, PozyxSerial, get_serial_ports
-from pypozyx.definitions.bitmasks import POZYX_INT_MASK_IMU
+# im = cv2.imread('pozyx_tags.jpg')
+# dim = (640, 480)
+# # resize image
+# resized = cv2.resize(im, dim, interpolation = cv2.INTER_AREA)
+# cv2.imwrite('resized.jpg',resized)
+im = cv2.imread('resized.jpg')
+clone = im.copy()
+# print(im.shape)
 
-# shortcut to not have to find out the port yourself
-serial_port = get_first_pozyx_serial_port()
-print('serial_port: ', serial_port)
-if serial_port is None:
-    print("No Pozyx connected. Check your USB cable or your driver!")
-    quit()
+def oneStep(title,clone):
+    clone[i:i+20,i*2:i*2+50,:] = 0
+    cv2.line(clone,(i,2*i),(2*i,4*i),(0,0,255),3)
+    resized = cv2.resize(clone, (1280,960), interpolation = cv2.INTER_AREA)
+    cv2.imshow(title,resized)
 
-pozyx = PozyxSerial(serial_port)
-sensor_data = SensorData()
-
-remote_id = 0x6a31
-if pozyx.checkForFlag(POZYX_INT_MASK_IMU, 0.01) == POZYX_SUCCESS:
-    status = pozyx.getAllSensorData(sensor_data, remote_id)
-    print("sensor_data = \n", sensor_data)
-
-remote_id = 0x6a35
-if pozyx.checkForFlag(POZYX_INT_MASK_IMU, 0.01) == POZYX_SUCCESS:
-    for i in range(5000):
-        sleep(.5)
-        status = pozyx.getAllSensorData(sensor_data, remote_id)
-        print(sensor_data.euler_angles)
-     
-
-# pozyx.getAllSensorData(sensor_data, 0x6a31)
-# print("sensor_data = \n", sensor_data)
-# pozyx.getAllSensorData(sensor_data, 0x6a35)
-# print("sensor_data = \n", sensor_data)
+t0 = time()
+for i in range(100):
+    clone = im.copy()
+    clone[i:i+20,i*2:i*2+50,:] = 0
+    cv2.line(clone,(i,2*i),(2*i,4*i),(0,0,255),3)
+    resized = cv2.resize(clone, (1280,960), interpolation = cv2.INTER_AREA)
+    cv2.imshow('tag',resized)
+    cv2.waitKey(1)
+print(100/(time()-t0))
+cv2.waitKey(0)
