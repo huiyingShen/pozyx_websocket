@@ -22,10 +22,7 @@ def pozyx_xyz():
         pnt.x = int(request.form.get('x'))
         pnt.y = int(request.form.get('y'))
         pnt.z = int(request.form.get('z'))
-        # print (x,y)
-        # cv2.circle(im,(int(x),int(y)),5,(0,0,255),thickness=3)
-        # cv2.imshow('map',im)
-        # cv2.waitKey(5)
+
         return jsonify("got xyz")
     if request.method == 'GET':
         r = {'x':pnt.x, 'y':pnt.y, 'z':pnt.z}

@@ -177,14 +177,16 @@ class IndoorNav(object):
         import path_proc
         from simpleAudioTest import BeeperManager
         import cv2
+        import requests
 
         im = cv2.imread('dist.png')
         cv2.imshow('dt',im)
+        cv2.waitKey(1)
         print(im.shape)
         lines = path_proc.procData()
 
         fMin,fMax,nSample=300,3000,20
-        bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.05, trim2Zero=True)
+        bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True)
 
         iPlayer = 0
         play_obj = bm.playi(iPlayer).play_obj
@@ -195,16 +197,13 @@ class IndoorNav(object):
         coef = 0.001     
         t0 = time()  
         t1 = t0   
-        nIter =300
+        nIter =5000
         xs,ys = [],[]
-
+        tmp = t0
         for i in range(nIter):
             position = self.localize(dimension = dimension)
             status = self.pozyx.getAllSensorData(sensor_data, remote_id=remote_id)
-            if status == False: 
-                play_obj.wait_done()
-                play_obj = bm.playi(iPlayer).play_obj
-                continue
+            if status == False: continue
             # print('                      ',sensor_data.euler_angles)
             # print("x, y, heading ", position.x, position.y, sensor_data.euler_angles.heading)
             angle = -sensor_data.euler_angles.heading/180*pi
@@ -214,22 +213,30 @@ class IndoorNav(object):
             x,y = position.x*coef, position.y*coef
             xs.append(x)
             ys.append(y)
+            if len(xs)>=5:
+                xTmp = xs[-5:]
+                yTmp = ys[-5:]
+                yTmp.sort()
+                xTmp.sort()
+                x,y = xTmp[2],yTmp[2]
+            iy,ix = im.shape[0] - int(y*100),int(x*100)
+            ix = bound(ix,0,im.shape[1]-1)
+            iy = bound(iy,0,im.shape[0]-1)
+            val = 255 - int(im[iy,ix,0])
+            iPlayer = int((nSample + 1)*val/255)
 
-            # play_obj.wait_done()
-            # iy,ix = im.shape[0] - int(y*100),int(x*100)
-            # ix = bound(ix,0,im.shape[1]-1)
-            # iy = bound(iy,0,im.shape[0]-1)
-            # val = 255 - int(im[iy,ix,0])
-            # iPlayer = int((nSample + 1)*val/255)
-            iVal = int(np.abs(x-5*0.3048)*100)
+            try: r = requests.post('http://127.0.0.1:8000/xyz', data ={'x':ix,'y':iy,'z':iPlayer}) 
+            except: pass
+             # iVal = int(np.abs(x-5*0.3048)*100)
             # a = angle
             # if a < 0: a += pi*2
             # iPlayer = int(bound(a,0,pi*2)*nSample/pi/2)
-            iPlayer = int(bound(iVal,0,50)*nSample/50)
+            # iPlayer = int(bound(iVal,0,50)*nSample/50)
             # print("angle= {:6.4f}, a= {:6.4f}, iPlayer = {:6.4f}  ".format( sensor_data.euler_angles.heading, a, iPlayer))
             print("dt = {:6.4f}, x = {:6.4f}, y = {:6.4f}, iPlayer = {}".format(dt,x,y,iPlayer))
-
-            play_obj = bm.playi(iPlayer).play_obj
+            # if time()-tmp>0.03:
+            # bm.playi(iPlayer).play_obj
+                # tmp = time()
 
         #     tag.cla()
         #     tag.plot_lines(lines)
