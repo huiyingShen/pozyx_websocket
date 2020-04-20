@@ -6,6 +6,7 @@ import os,time
 class Pnt:
     def __init__(self,x=0,y=0,z=0):
         self.x,self.y,self.z = int(x),int(y), int(z)
+        self.isNew = False
 pnt = Pnt()
 
 app = Flask(__name__, template_folder='templates')
@@ -22,10 +23,12 @@ def pozyx_xyz():
         pnt.x = int(request.form.get('x'))
         pnt.y = int(request.form.get('y'))
         pnt.z = int(request.form.get('z'))
+        pnt.isNew = True
 
         return jsonify("got xyz")
-    if request.method == 'GET':
-        r = {'x':pnt.x, 'y':pnt.y, 'z':pnt.z}
+    if request.method == 'GET': 
+        r = {'x':pnt.x, 'y':pnt.y, 'z':pnt.z, 'isNew':pnt.isNew}
+        if pnt.isNew: pnt.isNew = False
         print(r)
         return r
 
