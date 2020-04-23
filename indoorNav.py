@@ -7,7 +7,7 @@ from pypozyx.structures.device import UWBSettings
 
 from time import time,sleep
 import numpy as np
-from simpleAudioTest import BeeperManager
+from simpleAudioTest import BeeperManager,getPlayerNew
 import cv2
 import requests
 
@@ -19,13 +19,6 @@ def bound(val,low,high):
 def dist(x1,y1,x2,y2):
     return np.sqrt((x1-x2)*(x1-x2) + (y1-y2)*(y1-y2))
 
-def medianFilter(xs, ys):
-    xTmp = xs[-5:]
-    yTmp = ys[-5:]
-    yTmp.sort()
-    xTmp.sort()
-    return xTmp[2],yTmp[2]
-
 def get_iPlayer(x,y,im,nSample):
     iy,ix = im.shape[0] - int(y*100),int(x*100)
     ix = bound(ix,0,im.shape[1]-1)
@@ -34,20 +27,21 @@ def get_iPlayer(x,y,im,nSample):
     iPlayer = int((nSample + 1)*val/255)
     return ix,iy,iPlayer
 
-def summary(xs, ys, x0 = 5*0.3048, y0 = 10*0.3048):
-    x1,y1 = np.average(xs),np.average(ys)
-    d0,d2 = [],[]
-    for x,y in zip(xs,ys):
-        d0.append(dist(x,y,x0,y0)) 
-        d2.append(dist(x,y,x1,y1))
-    print('runs = {}'.format(len(d2)))
-    print('measured tag (x,y):    {:6.4f}, {:6.4f}'.format(x0,y0))
-    print('detected tag centroid: {:6.4f}, {:6.4f}'.format(x1,y1))
-    print('distance to centroid: median, min, max: {:6.4f}, {:6.4f}, {:6.4f}'.format(np.median(d2),np.min(d2),np.max(d2)))
-    print('distance to measured (x,y): median, min, max: {:6.4f}, {:6.4f}, {:6.4f}'.format(np.median(d0),np.min(d0),np.max(d0)))
-
 
 class IndoorNav(object):
+    @staticmethod
+    def summary(xs, ys, x0 = 5*0.3048, y0 = 10*0.3048):
+        x1,y1 = np.average(xs),np.average(ys)
+        d0,d2 = [],[]
+        for x,y in zip(xs,ys):
+            d0.append(dist(x,y,x0,y0)) 
+            d2.append(dist(x,y,x1,y1))
+        print('runs = {}'.format(len(d2)))
+        # print('measured tag (x,y):    {:6.4f}, {:6.4f}'.format(x0,y0))
+        print('detected tag centroid: {:6.4f}, {:6.4f}'.format(x1,y1))
+        print('distance to centroid: median, min, max: {:6.4f}, {:6.4f}, {:6.4f}'.format(np.median(d2),np.min(d2),np.max(d2)))
+        # print('distance to measured (x,y): median, min, max: {:6.4f}, {:6.4f}, {:6.4f}'.format(np.median(d0),np.min(d0),np.max(d0)))
+
     def __init__(self):
         self.serial_port = get_first_pozyx_serial_port()
         self.pozyx = PozyxSerial(self.serial_port)
@@ -99,7 +93,7 @@ class IndoorNav(object):
         # settings2 = UWBSettings(2,850,64,64,11.5)
         # self.pozyx.setUWBSettings(settings2)
 
-    def test3(self,is3d = True, isRemote =True, hasAudio = False ):
+    def test3(self,is3d = True, isRemote =True, hasAudio = False, hasSmoothing = True, nIter =100 ):
         if is3d: dimension = PozyxConstants.DIMENSION_3D
         else: dimension = PozyxConstants.DIMENSION_2D
         if isRemote: remote_id = 0x6a37
@@ -113,17 +107,19 @@ class IndoorNav(object):
         self.setAnchorsManual(anchorsPlusXyz,remote_id = remote_id)
         sensor_data = SensorData()
 
-        im = cv2.imread('dist.png')
+        # im = cv2.imread('dist.png')
+        im = cv2.imread('output.bmp')
         print('im.shape = ', im.shape)
 
-        fMin,fMax,nSample = 300,3000,20
-        bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True)
+        # fMin,fMax,nSample = 300,3000,20
+        # bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True)
         for _ in range(200): _ = self.localize(dimension = dimension) #warm up   
 
         coef = 0.001     
         t0 = time()    
-        nIter =500
+        if hasSmoothing: nIter += 4
         xs,ys = [],[]
+        xSmoothed, ySmoothed = [],[]
         for _ in range(nIter):
             t1 = time()
             position = self.localize(dimension = dimension)
@@ -132,10 +128,21 @@ class IndoorNav(object):
             x,y = position.x*coef, position.y*coef
             xs.append(x)
             ys.append(y)
-            if len(xs)>=5: #x,y = medianFilter(xs,ys)
-                x = np.median(np.array(xs[-5:]))
-                y = np.median(np.array(ys[-5:]))
-            ix,iy,iPlayer = get_iPlayer(x,y,im,nSample)
+            if hasSmoothing:
+                if len(xs)>=5: #x,y = medianFilter(xs,ys)
+                    x = np.median(np.array(xs[-5:]))
+                    y = np.median(np.array(ys[-5:]))
+                    xSmoothed.append(x)
+                    ySmoothed.append(y)
+            iy,ix = im.shape[0] - int(y*100),int(x*100)
+            ix = bound(ix,0,im.shape[1]-1)
+            iy = bound(iy,0,im.shape[0]-1)
+            val = int(im[iy,ix,0])
+            if val == 255 :iPlayer = 0
+            else: 
+                iPlayer = int(6 - val/40)
+            
+            # ix,iy,iPlayer = get_iPlayer(x,y,im,nSample)
 
             try: r = requests.post('http://127.0.0.1:8000/xyz', data ={'x':ix,'y':iy,'z':iPlayer}) 
             except: pass
@@ -144,11 +151,31 @@ class IndoorNav(object):
             # if a < 0: a += pi*2
             # iPlayer = int(bound(a,0,pi*2)*nSample/pi/2)
             # print("angle= {:6.4f}, a= {:6.4f}, iPlayer = {:6.4f}  ".format( sensor_data.euler_angles.heading, a, iPlayer))
-            print("dt = {:6.4f}, x = {:6.4f}, y = {:6.4f}, iPlayer = {}".format(time()-t1,x,y,iPlayer))
+            print("dt = {:6.4f}, x = {:6.4f}, y = {:6.4f}, val = {},  iPlayer = {}".format(time()-t1,x,y,val, iPlayer))
             if hasAudio: bm.playi(iPlayer)
+        print('hasSmoothing = ', hasSmoothing)
         print('fps = {}'.format(nIter/(time() - t0))) 
-        summary(xs, ys, x0 = 5*0.3048, y0 = 10*0.3048 )
+        if hasSmoothing:self.summary(xSmoothed, ySmoothed, x0 = 2.5, y0 = 2.5 )
+        else: self.summary(xs, ys, x0 = 2.5, y0 = 2.5 )
+
+    def testbmp(self):
+        im = cv2.imread('output.bmp')
+        print('im.shape = ', im.shape)
+        
+        y = 2.0
+        for i in range(400):
+            x = i*0.025
+            iy,ix = im.shape[0] - int(y*100),int(x*100)
+            ix = bound(ix,0,im.shape[1]-1)
+            iy = bound(iy,0,im.shape[0]-1)
+            val = int(im[iy,ix,0])
+            if val == 255 :iPlayer = 0
+            else: 
+                iPlayer = int(6 - val/40)
+            print(" x = {:6.4f}, y = {:6.4f}, val = {}, iPlayer = {}".format(x,y,val,iPlayer))
+
 
 if __name__ == "__main__":
-    IndoorNav().test3(is3d = True, isRemote =True, hasAudio = False )
+    # IndoorNav().testbmp()
+    IndoorNav().test3(is3d = True, isRemote =True, hasAudio = False, hasSmoothing=True,nIter =5000 )
 

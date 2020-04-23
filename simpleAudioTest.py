@@ -97,6 +97,23 @@ def test3():
         bm.playi(11).play_obj.wait_done()
         bm.playi(5)
     print('fps = ', 1/(time()-t0)*20)
+
+def getFreq1():
+    f0 = [880, ]
+    k = 2**(-1.0/12.0)
+    f1 = 586.67
+    f0.extend( [f1*k**(0.1*d/0.1) for d in range(0,6)])
+    print(f0)
+    return f0
+
+def getPlayerNew():
+    return BeeperManager(freqs = getFreq1(), dur = 0.05, trim2Zero=True)
+
+def test4():
+    bm = getPlayerNew()
+    bm.playi(0).play_obj.wait_done() 
+    bm.playi(1).play_obj.wait_done()
+    bm.playi(6).play_obj.wait_done()
 if __name__ == '__main__':
     # AsyncBeeper(440,0.25).play_sync()
-    test2()
+    test4()

@@ -1,19 +1,23 @@
 from time import time
 import requests
 import cv2
-from simpleAudioTest import BeeperManager
+from simpleAudioTest import BeeperManager,getPlayerNew
 
 def bound(val,low,high):
     if val< low: val = low
     elif val > high: val = high
     return val
 
-fMin,fMax,nSample=300,3000,20
-bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True)
+# fMin,fMax,nSample=300,3000,20
+# bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True)
+bm = getPlayerNew()
+bm.playAll()
 
-
-im0 = cv2.imread('dist.png')
-im0 = cv2.resize(im0, (1200,1200), interpolation = cv2.INTER_AREA)
+# im0 = cv2.imread('dist.png')
+im0 = cv2.imread('output.bmp')
+coef = 3
+r,c,_ = im0.shape
+im0 = cv2.resize(im0, (int(r*coef),int(c*coef)), interpolation = cv2.INTER_AREA)
 cv2.waitKey(25)
 url = 'http://10.0.0.241:8000/xyz'
 t0 = time()
@@ -24,8 +28,9 @@ while True:
     c = cv2.waitKey(5)
     if c == 27:
         break
-    cv2.circle(im,(ix*2,iy*2),5,(0,255,255),3)
-    r = requests.get(url) 
+    # cv2.circle(im,(int(ix*coef),int(iy*coef)),5,(0,255,255),3)
+    try: r = requests.get(url) 
+    except: continue
     xyz = r.json()
     ix,iy = int(xyz['x']),int(xyz['y'])
     iPlayer = int(xyz['z'])
@@ -40,7 +45,7 @@ while True:
 
 
     bm.playi(iPlayer)
-    cv2.circle(im,(ix*2,iy*2),7,(0,0,255),4)
+    cv2.circle(im,(int(ix*coef),int(iy*coef)),10,(0,0,255),7)
     cv2.imshow('im',im)
 
 print(100/(time()-t0))
