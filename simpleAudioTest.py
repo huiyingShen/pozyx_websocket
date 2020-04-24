@@ -50,6 +50,10 @@ class BeeperManager:
             self.beepers.append(AsyncBeeper(f,dur,trim2Zero))
         return self
 
+    def beep_by_distance(self,d,dMax=6):
+        iPlayer = int((1 - d/dMax)*len(self.beepers))
+        self.playi(iPlayer)
+
     def findBeeper(self,freq, dur):
         dur_msec = int(dur*1000)
         for b in self.beepers:
@@ -77,6 +81,7 @@ class BeeperManager:
     def playAll(self):
         for b in self.beepers:
             b.play_sync(vol=0.1)
+
 
 def test2(fMin=300,fMax=3000,nSample=10):
     base = np.exp(np.log(fMax/fMin)/nSample)

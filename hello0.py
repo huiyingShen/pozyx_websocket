@@ -3,6 +3,9 @@ import numpy as np
 import cv2
 from multiprocessing import Process
 
+binmap = np.zeros((500,500),np.float64)
+binmap[100:400, 150:200] = 255
+h,w = binmap.shape
 
 xs = [0,2.1,5.4,-1,7,10,2]
 tmp = xs[-5:]
