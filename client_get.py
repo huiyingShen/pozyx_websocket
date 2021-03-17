@@ -11,7 +11,7 @@ def bound(val,low,high):
     return val
 
 fMin,fMax,nSample=300,3000,20
-bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True)
+bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True).addKnock()
 # bm = getPlayerNew()
 bm.playAll()
 
@@ -30,6 +30,8 @@ route = '/xyz'
 t0 = time()
 ix,iy = 0,0
 t1 = t0
+tPlay = t0
+player = None
 while True:
     im = im0.copy()
     c = cv2.waitKey(5)
@@ -48,14 +50,15 @@ while True:
     # iPlayer = int((nSample + 1)*val/255)
     ix2,iy2 = nearest_barrier.find_nearest_barrier(gray,ix,iy,theta)
     d = sqrt((ix-ix2)*(ix-ix2) + (iy-iy2)*(iy-iy2))
-    dMax = 600
+    dMax = 500
     iPlayer = int((1 - d/dMax)*len(bm.beepers))
     dt = time() - t1
     t1 = time()
     print("dt = {:6.4}, x = {}, y = {}, iPlayer = {}".format(dt,ix,iy,iPlayer))
 
-
-    bm.playi(iPlayer)
+    if time() - tPlay > 0.05:
+        player = bm.playi(iPlayer)
+        if player != None: tPlay = time()
     ix = int(ix*coef)
     iy = int(iy*coef)
     ix2 = int(ix2*coef)

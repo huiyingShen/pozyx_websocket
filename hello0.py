@@ -1,17 +1,21 @@
-from time import time,sleep
-import numpy as np
-import cv2
-from multiprocessing import Process
 
-binmap = np.zeros((500,500),np.float64)
-binmap[100:400, 150:200] = 255
-h,w = binmap.shape
+from __future__ import print_function
+import torch
+x = torch.rand(5, 3)
+print(x)
 
-xs = [0,2.1,5.4,-1,7,10,2]
-tmp = xs[-5:]
-tmp.sort()
-print(tmp,tmp[2])
-print(xs)
+# from time import time,sleep
+# import numpy as np
+# import cv2
+# from multiprocessing import Process
+
+# binmap = np.zeros((500,500),np.float64)
+# binmap[ 10:490, 150:230] = 255
+# binmap[200:280, 230:400] = 255
+
+# h,w = binmap.shape
+
+
 # im = cv2.imread('pozyx_tags.jpg')
 # dim = (640, 480)
 # # resize image
@@ -21,11 +25,11 @@ print(xs)
 # clone = im.copy()
 # print(im.shape)
 
-def oneStep(title,clone):
-    clone[i:i+20,i*2:i*2+50,:] = 0
-    cv2.line(clone,(i,2*i),(2*i,4*i),(0,0,255),3)
-    resized = cv2.resize(clone, (1280,960), interpolation = cv2.INTER_AREA)
-    cv2.imshow(title,resized)
+# def oneStep(title,clone):
+#     clone[i:i+20,i*2:i*2+50,:] = 0
+#     cv2.line(clone,(i,2*i),(2*i,4*i),(0,0,255),3)
+#     resized = cv2.resize(clone, (1280,960), interpolation = cv2.INTER_AREA)
+#     cv2.imshow(title,resized)
 
 # t0 = time()
 # for i in range(100):

@@ -103,11 +103,11 @@ if __name__ == "__main__":
         quit()
 
     remote_id = 0x6a3d           # the network ID of the remote device
-    remote = True               # whether to use the given remote device for ranging
+    remote = False               # whether to use the given remote device for ranging
     if not remote:
         remote_id = None
 
-    destination_id = 0x6a6f      # network ID of the ranging destination
+    destination_id = 0x6a37      # network ID of the ranging destination
     # distance that separates the amount of LEDs lighting up.
     range_step_mm = 1000
 
@@ -119,5 +119,5 @@ if __name__ == "__main__":
                      ranging_protocol, remote_id)
     r.setup()
     print('done setup')
-    for i in range(100):
+    for i in range(10):
         r.loop()

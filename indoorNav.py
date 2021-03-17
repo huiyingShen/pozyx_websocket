@@ -99,14 +99,16 @@ class IndoorNav(object):
         if isRemote: remote_id = 0x6a37
         else: remote_id = None
 
-        id_xyz = [(0x6a35,0,99.,0),(0x6a60,107.25,2,0),(0x6a6f,210,98.5,0),(0x6a31,108.5,177.75,0),(0x6a6e,133.5,38.75,58.75)]
-        id_xyz = [(id,x*25.4,y*25.4,z*25.4) for id,x,y,z in id_xyz]
+        # id_xyz = [(0x6a35,0,99.,0),(0x6a60,107.25,2,0),(0x6a6f,210,98.5,0),(0x6a31,108.5,177.75,0),(0x6a6e,133.5,38.75,58.75)]
+        # id_xyz = [(id,x*25.4,y*25.4,z*25.4) for id,x,y,z in id_xyz]
+        id_xyz = [(0x6a6f,10,2520,0),(0x6a35,2810,50,0),(0x6a31,546,3030,0),(0x6a60,2510,4750,0)]
+     
         anchorsPlusXyz = [DeviceCoordinates(id, 1, Coordinates(x,y,z)) for id,x,y,z in id_xyz ]
 
         self.pozyx.setRangingProtocol(PozyxConstants.RANGE_PROTOCOL_FAST,remote_id=remote_id)
         self.setAnchorsManual(anchorsPlusXyz,remote_id = remote_id)
         sensor_data = SensorData()
-
+    
         # im = cv2.imread('dist.png')
         im = cv2.imread('output.bmp')
         print('im.shape = ', im.shape)
@@ -173,5 +175,5 @@ class IndoorNav(object):
 
 if __name__ == "__main__":
     # IndoorNav().testDirection( remote_id = 0x6a37)
-    IndoorNav().test3(is3d = True, isRemote =True, hasAudio = False, hasSmoothing=True,nIter =2000 )
+    IndoorNav().test3(is3d = True, isRemote =True, hasAudio = False, hasSmoothing=False,nIter = 5000 )
 
