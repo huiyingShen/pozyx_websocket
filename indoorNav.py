@@ -2,6 +2,7 @@
 
 from pypozyx import (SensorData, SingleRegister, POZYX_SUCCESS, get_first_pozyx_serial_port,
                      PozyxSerial, get_serial_ports,DeviceRange,PozyxConstants,DeviceCoordinates,POZYX_3D, Coordinates)
+from pypozyx import POZYX_POS_ALG_UWB_ONLY
 from pypozyx.definitions.bitmasks import POZYX_INT_MASK_IMU
 from pypozyx.structures.device import UWBSettings
 
@@ -61,6 +62,7 @@ class IndoorNav(object):
 
     def localize(self,dimension = PozyxConstants.DIMENSION_3D):
         algorithm = PozyxConstants.POSITIONING_ALGORITHM_UWB_ONLY     
+        # algorithm = POZYX_POS_ALG_UWB_ONLY
         status = self.pozyx.doPositioning(self.position, dimension, height=0, algorithm=algorithm, remote_id=self.remote_id)
         if status == POZYX_SUCCESS: 
             return self.position
@@ -101,7 +103,8 @@ class IndoorNav(object):
 
         # id_xyz = [(0x6a35,0,99.,0),(0x6a60,107.25,2,0),(0x6a6f,210,98.5,0),(0x6a31,108.5,177.75,0),(0x6a6e,133.5,38.75,58.75)]
         # id_xyz = [(id,x*25.4,y*25.4,z*25.4) for id,x,y,z in id_xyz]
-        id_xyz = [(0x6a6f,10,2520,0),(0x6a35,2810,50,0),(0x6a31,546,3030,0),(0x6a60,2510,4750,0)]
+        id_xyz = [(0x6a6f,10,2520,0),(0x6a35,2810,50,0),(0x6a31,5460,3030,0),(0x6a60,2510,4750,0)]
+        # id_xyz = [(0x6a6f,3426,0,0),(0x6a35,10,4513,0),(0x6a31,3420-80,12116,0),(0x6a60,6434,8154,0)]
      
         anchorsPlusXyz = [DeviceCoordinates(id, 1, Coordinates(x,y,z)) for id,x,y,z in id_xyz ]
 
@@ -175,5 +178,5 @@ class IndoorNav(object):
 
 if __name__ == "__main__":
     # IndoorNav().testDirection( remote_id = 0x6a37)
-    IndoorNav().test3(is3d = True, isRemote =True, hasAudio = False, hasSmoothing=False,nIter = 5000 )
+    IndoorNav().test3(is3d = True, isRemote =False, hasAudio = False, hasSmoothing=False,nIter = 5000 )
 
