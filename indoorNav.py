@@ -108,7 +108,7 @@ class IndoorNav(object):
      
         anchorsPlusXyz = [DeviceCoordinates(id, 1, Coordinates(x,y,z)) for id,x,y,z in id_xyz ]
 
-        self.pozyx.setRangingProtocol(PozyxConstants.RANGE_PROTOCOL_FAST,remote_id=remote_id)
+        # self.pozyx.setRangingProtocol(PozyxConstants.RANGE_PROTOCOL_FAST,remote_id=remote_id)
         self.setAnchorsManual(anchorsPlusXyz,remote_id = remote_id)
         sensor_data = SensorData()
     
@@ -178,5 +178,5 @@ class IndoorNav(object):
 
 if __name__ == "__main__":
     # IndoorNav().testDirection( remote_id = 0x6a37)
-    IndoorNav().test3(is3d = True, isRemote =False, hasAudio = False, hasSmoothing=False,nIter = 5000 )
+    IndoorNav().test3(is3d = True, isRemote = False, hasAudio = False, hasSmoothing=False,nIter = 5000 )
 

@@ -20,10 +20,8 @@ from pypozyx.tools.version_check import perform_latest_version_check
 class ReadyToLocalize(object):
     """Continuously calls the Pozyx positioning function and prints its position."""
 
-    def __init__(self, pozyx, osc_udp_client, anchors, algorithm=POZYX_POS_ALG_UWB_ONLY, dimension=POZYX_3D, height=1000, remote_id=None):
+    def __init__(self, pozyx, anchors, algorithm=POZYX_POS_ALG_UWB_ONLY, dimension=POZYX_3D, height=1000, remote_id=None):
         self.pozyx = pozyx
-        self.osc_udp_client = osc_udp_client
-
         self.anchors = anchors
         self.algorithm = algorithm
         self.dimension = dimension
@@ -48,10 +46,9 @@ class ReadyToLocalize(object):
         print("")
 
         self.setAnchorsManual(save_to_flash=False)
-        self.printPublishConfigurationResult()
+
 
     def loop(self):
-
         """Performs positioning and displays/exports the results."""
         position = Coordinates()
         status = self.pozyx.doPositioning(
@@ -61,17 +58,6 @@ class ReadyToLocalize(object):
             return position
         else:
             self.printPublishErrorCode("positioning")
-
-    def printPublishPosition(self, position):
-        """Prints the Pozyx's position and possibly sends it as a OSC packet"""
-        network_id = self.remote_id
-        if network_id is None:
-            network_id = 0
-        print("POS ID {}, x(mm): {pos.x} y(mm): {pos.y} z(mm): {pos.z}".format(
-            "0x%0.4x" % network_id, pos=position))
-        if self.osc_udp_client is not None:
-            self.osc_udp_client.send_message(
-                "/position", [network_id, int(position.x), int(position.y), int(position.z)])
 
     def printPublishErrorCode(self, operation):
         """Prints the Pozyx's error and possibly sends it as a OSC packet"""
@@ -145,10 +131,11 @@ class ReadyToLocalize(object):
                     "/anchor", [anchor.network_id, int(anchor.coordinates.x), int(anchor.coordinates.y), int(anchor.coordinates.z)])
                 sleep(0.025)
 
+def main(remote_id = 0x6a37, check_pypozyx_version = True):
+    import requests
 
-if __name__ == "__main__":
     # Check for the latest PyPozyx version. Skip if this takes too long or is not needed by setting to False.
-    check_pypozyx_version = True
+    
     if check_pypozyx_version:
         perform_latest_version_check()
 
@@ -158,21 +145,8 @@ if __name__ == "__main__":
         print("No Pozyx connected. Check your USB cable or your driver!")
         quit()
 
-    remote_id = 0x6a37                 # remote device network ID
-    remote = True                   # whether to use a remote device
-    if not remote:
-        remote_id = None
+    remote_id = remote_id                 # remote device network ID
 
-    # enable to send position data through OSC
-    use_processing = False
-
-    # configure if you want to route OSC to outside your localhost. Networking knowledge is required.
-    ip = "127.0.0.1"
-    network_port = 8888
-
-    osc_udp_client = None
-    if use_processing:
-        osc_udp_client = SimpleUDPClient(ip, network_port)
 
     # necessary data for calibration, change the IDs and coordinates yourself according to your measurement
     # anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(150, 1500, 1540)),
@@ -181,10 +155,10 @@ if __name__ == "__main__":
     #            DeviceCoordinates(0x606f, 1, Coordinates(2160, 3050, 1540))] 
     # id_xyz = [(0x6a6f,10,2520,0),(0x6a35,2810,50,0),(0x6a31,5460,3030,0),(0x6a60,2510,4750,0)]
 
-    anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(5460, 3030, 1540)),
-               DeviceCoordinates(0x6a60, 1, Coordinates(2510, 4750, 1540)),
-               DeviceCoordinates(0x6a35, 1, Coordinates(2810, 50, 1540)),
-               DeviceCoordinates(0x606f, 1, Coordinates(10, 2520, 1540))]
+    anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(5460,   3030,   1540)),
+               DeviceCoordinates(0x6a60, 1, Coordinates(2510,   4750,   1540)),
+               DeviceCoordinates(0x6a35, 1, Coordinates(2810,   50,     1540)),
+               DeviceCoordinates(0x606f, 1, Coordinates(10,     2520,   1540))]
 
     # positioning algorithm to use, other is PozyxConstants.POSITIONING_ALGORITHM_TRACKING
     algorithm = PozyxConstants.POSITIONING_ALGORITHM_UWB_ONLY
@@ -194,12 +168,16 @@ if __name__ == "__main__":
     height = 1000
 
     pozyx = PozyxSerial(serial_port)
-    r = ReadyToLocalize(pozyx, osc_udp_client, anchors, algorithm, dimension, height, remote_id)
+    r = ReadyToLocalize(pozyx, anchors, algorithm, dimension, height, remote_id)
     r.setup()
     from time import time
-    while True:
+    for _ in range(5000):
         t = time()
-        try:
-            pos = r.loop()
-            print("0x%0.2x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} ".format(time()-t,pos.x,pos.y ))
+        pos = r.loop()
+        try: res = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': 0}) 
         except: pass
+        try:print("0x%0.4x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} ".format(time()-t,pos.x,pos.y ))
+        except: pass
+
+if __name__ == "__main__":
+    main()

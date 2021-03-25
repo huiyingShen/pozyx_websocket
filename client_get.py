@@ -10,13 +10,13 @@ def bound(val,low,high):
     elif val > high: val = high
     return val
 
-fMin,fMax,nSample=300,3000,20
-bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True).addKnock()
-# bm = getPlayerNew()
-bm.playAll()
+# fMin,fMax,nSample=300,3000,20
+# bm = BeeperManager().setAllBeepers(fMin=fMin, fMax=fMax, nSample=nSample, dur=0.02, trim2Zero=True).addKnock()
+# # bm = getPlayerNew()
+# bm.playAll()
 
 
-im0 = cv2.imread('binmap.bmp')
+im0 = cv2.imread('image00.png')
 gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
 
 # im0 = cv2.imread('dist.png')
