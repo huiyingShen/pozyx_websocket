@@ -25,7 +25,7 @@ coef = 3
 r,c,_ = im0.shape
 im0 = cv2.resize(im0, (int(r*coef),int(c*coef)), interpolation = cv2.INTER_AREA)
 cv2.waitKey(25)
-address = 'http://10.0.0.241:8000'
+address = 'http://10.0.0.242:8000'
 route = '/xyz'
 t0 = time()
 ix,iy = 0,0

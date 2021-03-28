@@ -12,7 +12,7 @@ from time import sleep
 
 from pypozyx import (POZYX_POS_ALG_UWB_ONLY, POZYX_3D, Coordinates, POZYX_SUCCESS, PozyxConstants, version,
                      DeviceCoordinates, PozyxSerial, get_first_pozyx_serial_port, SingleRegister, DeviceList, PozyxRegisters)
-from pythonosc.udp_client import SimpleUDPClient
+# from pythonosc.udp_client import SimpleUDPClient
 
 from pypozyx.tools.version_check import perform_latest_version_check
 
@@ -57,32 +57,9 @@ class ReadyToLocalize(object):
             # self.printPublishPosition(position)
             return position
         else:
-            self.printPublishErrorCode("positioning")
+            return "error in localizing"
 
-    def printPublishErrorCode(self, operation):
-        """Prints the Pozyx's error and possibly sends it as a OSC packet"""
-        error_code = SingleRegister()
-        network_id = self.remote_id
-        if network_id is None:
-            self.pozyx.getErrorCode(error_code)
-            print("LOCAL ERROR %s, %s" % (operation, self.pozyx.getErrorMessage(error_code)))
-            if self.osc_udp_client is not None:
-                self.osc_udp_client.send_message("/error", [operation, 0, error_code[0]])
-            return
-        status = self.pozyx.getErrorCode(error_code, self.remote_id)
-        if status == POZYX_SUCCESS:
-            print("ERROR %s on ID %s, %s" %
-                  (operation, "0x%0.4x" % network_id, self.pozyx.getErrorMessage(error_code)))
-            if self.osc_udp_client is not None:
-                self.osc_udp_client.send_message(
-                    "/error", [operation, network_id, error_code[0]])
-        else:
-            self.pozyx.getErrorCode(error_code)
-            print("ERROR %s, couldn't retrieve remote error code, LOCAL ERROR %s" %
-                  (operation, self.pozyx.getErrorMessage(error_code)))
-            if self.osc_udp_client is not None:
-                self.osc_udp_client.send_message("/error", [operation, 0, -1])
-            # should only happen when not being able to communicate with a remote Pozyx.
+
 
     def setAnchorsManual(self, save_to_flash=False):
         """Adds the manually measured anchors to the Pozyx's device list one for one."""
@@ -97,39 +74,6 @@ class ReadyToLocalize(object):
             self.pozyx.saveAnchorIds(remote_id=self.remote_id)
             self.pozyx.saveRegisters([PozyxRegisters.POSITIONING_NUMBER_OF_ANCHORS], remote_id=self.remote_id)
         return status
-
-    def printPublishConfigurationResult(self):
-        """Prints and potentially publishes the anchor configuration result in a human-readable way."""
-        list_size = SingleRegister()
-
-        self.pozyx.getDeviceListSize(list_size, self.remote_id)
-        print("List size: {0}".format(list_size[0]))
-        if list_size[0] != len(self.anchors):
-            self.printPublishErrorCode("configuration")
-            return
-        device_list = DeviceList(list_size=list_size[0])
-        self.pozyx.getDeviceIds(device_list, self.remote_id)
-        print("Calibration result:")
-        print("Anchors found: {0}".format(list_size[0]))
-        print("Anchor IDs: ", device_list)
-
-        for i in range(list_size[0]):
-            anchor_coordinates = Coordinates()
-            self.pozyx.getDeviceCoordinates(device_list[i], anchor_coordinates, self.remote_id)
-            print("ANCHOR, 0x%0.4x, %s" % (device_list[i], str(anchor_coordinates)))
-            if self.osc_udp_client is not None:
-                self.osc_udp_client.send_message(
-                    "/anchor", [device_list[i], int(anchor_coordinates.x), int(anchor_coordinates.y), int(anchor_coordinates.z)])
-                sleep(0.025)
-
-    def printPublishAnchorConfiguration(self):
-        """Prints and potentially publishes the anchor configuration"""
-        for anchor in self.anchors:
-            print("ANCHOR,0x%0.4x,%s" % (anchor.network_id, str(anchor.coordinates)))
-            if self.osc_udp_client is not None:
-                self.osc_udp_client.send_message(
-                    "/anchor", [anchor.network_id, int(anchor.coordinates.x), int(anchor.coordinates.y), int(anchor.coordinates.z)])
-                sleep(0.025)
 
 def main(remote_id = 0x6a37, check_pypozyx_version = True):
     import requests
@@ -174,8 +118,10 @@ def main(remote_id = 0x6a37, check_pypozyx_version = True):
     for _ in range(5000):
         t = time()
         pos = r.loop()
-        try: res = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': 0}) 
+
+        try: _ = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': 0}) 
         except: pass
+
         try:print("0x%0.4x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} ".format(time()-t,pos.x,pos.y ))
         except: pass
 
