@@ -4,6 +4,43 @@ import requests
 import cv2
 from numba import jit
 
+from pysinewave import SineWave
+import simpleaudio as sa
+from time import time,sleep
+import threading
+
+class AudioPlayer:
+    def __init__(self):
+        self.sineWave = SineWave(pitch = 12, pitch_per_second = 100)
+        self.wave_obj = sa.WaveObject.from_wave_file("Knocking-on-door.wav")
+        self.cases = "beep","knock","silent"
+        self.freq = 500
+        self.case = "silent"
+
+    def knock(self,n=1):
+        for _ in range(n):
+            self.wave_obj.play().wait_done()
+
+    def beep(self,freq,t=0.01):
+        self.sineWave.set_frequency(freq)
+        self.sineWave.play()
+        sleep(t)
+
+    def loop(self):
+        while True:
+            if not (self.case in self.cases): break
+            if self.case == self.cases[0]: 
+                self.beep(self.freq,0.01)
+            elif self.case == self.cases[1]: 
+                self.sineWave.stop()
+                self.knock(1)
+            else: 
+                self.sineWave.stop()
+                sleep(0.01)
+                
+    def go(self):
+        threading.Thread(target=self.loop).start()
+
 class PozyxParam:
     def __init__(self):
         self.isExp = True
@@ -13,11 +50,11 @@ class PozyxParam:
         self.distMax = 600.0  
 
     def getFreq(self, d):
-        f1 = freqLow
-        f2 = freqHigh
+        f1 = self.freqLow
+        f2 = self.freqHigh
         if self.isHigh2Low:
-            f2 = freqLow
-            f1 = freqHigh
+            f2 = self.freqLow
+            f1 = self.freqHigh
         
         if self.isExp: return self.freq_exp(d, f1, f2)
         else: return self.freq_linear(d,f1, f2)
@@ -57,15 +94,16 @@ class OneFingerTouch:
         self.y0 = 0
         self.dMin = 10
         self.d2Follow = 20
+        self.theta = 0
     
     def touchMoved(self, x,y):
         d = dist(self.x0,self.y0,x,y)
-        if d < self.dMin: return False,0
-        theta = atan2(y-self.y0,x-self.x0)
+        if d < self.dMin: return False, self.theta
+        self.theta = atan2(y-self.y0,x-self.x0)
         if d > self.d2Follow:
-            self.x0 += (d - self.d2Follow)*cos(theta)
-            self.y0 += (d - self.d2Follow)*sin(theta)
-        return True,theta
+            self.x0 += (d - self.d2Follow)*cos(self.theta)
+            self.y0 += (d - self.d2Follow)*sin(self.theta)
+        return True,self.theta
 
 im0 = cv2.imread('image00.png')
 gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
@@ -83,6 +121,11 @@ address = 'http://10.0.0.242:8000'
 route = '/xyz'
 t0 = time()
 finger = OneFingerTouch()
+audioPlayer = AudioPlayer()
+param = PozyxParam()
+
+audioPlayer.case = "silent"
+audioPlayer.go()
 
 while True:
     im = im0.copy()
@@ -95,6 +138,7 @@ while True:
     xyz = res.json()
     ix,iy = int(xyz['x']/10),int(xyz['y']/10)
     if ix<=0 or iy <= 0 or ix >= col or iy >= row:
+        audioPlayer.case = "knock"
         pass
     else:
         b,theta = finger.touchMoved(ix,iy)
@@ -108,8 +152,14 @@ while True:
             cv2.circle(im,(ix,iy),5,(0,0,255),2)
             cv2.circle(im,(ix2,iy2),3,(0,255,0),1)
             if pix > 250:
-                ix2,iy2 = find_nearest_barrier(gray,ix,iy,theta,thrsh = 250)
-                cv2.circle(im,(ix2,iy2),3,(255,0,0),1)
-            cv2.imshow('im',im)
+                ix3,iy3 = find_nearest_barrier(gray,ix,iy,theta,thrsh = 250)
+                cv2.circle(im,(ix3,iy3),3,(255,0,0),1)
+                dx,dy = (ix3-ix)/coef, (iy3-iy)/coef
+                d = sqrt(dx*dx + dy*dy)
+                audioPlayer.case = "beep"
+                audioPlayer.freq = param.getFreq(d)
+            else: audioPlayer.case = "silent"
+    cv2.imshow('im',im)
+
 print(100/(time()-t0))
 cv2.waitKey(0)
