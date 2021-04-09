@@ -3,6 +3,7 @@ from math import sqrt,pi,atan2,sin,cos
 import requests
 import cv2
 from numba import jit
+import numpy as np
 
 from pysinewave import SineWave
 import simpleaudio as sa
@@ -105,61 +106,77 @@ class OneFingerTouch:
             self.y0 += (d - self.d2Follow)*sin(self.theta)
         return True,self.theta
 
-im0 = cv2.imread('image00.png')
-gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
+def main():
+    im0 = cv2.imread('image00.png')
+    gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
 
 
-coef = 1.0
-row,col,_ = im0.shape
-print(row,col)
-im0 = cv2.resize(im0, (int(row*coef),int(col*coef)), interpolation = cv2.INTER_AREA)
-cv2.waitKey(25)
-# cv2.imshow("img",im0)
-# cv2.waitKey(0)
+    row,col,_ = im0.shape
+    print(row,col)
+    cv2.waitKey(25)
+    # cv2.imshow("img",im0)
+    # cv2.waitKey(0)
 
-address = 'http://10.0.0.242:8000'
-route = '/xyz'
-t0 = time()
-finger = OneFingerTouch()
-audioPlayer = AudioPlayer()
-param = PozyxParam()
+    address = 'http://127.0.0.1:8000'
+    route = '/xyz'
+    t0 = time()
+    finger = OneFingerTouch()
+    audioPlayer = AudioPlayer()
+    param = PozyxParam()
 
-audioPlayer.case = "silent"
-audioPlayer.go()
+    audioPlayer.case = "silent"
+    audioPlayer.go()
+    sz = 10
+    xa = np.array([0]*sz)
+    ya = np.array([0]*sz)
+    
+    i = 0
+    while True:
+        i = (i+1)%sz
+        im = im0.copy()
+        c = cv2.waitKey(5)
+        if c == 27:
+            audioPlayer.case = "quit"
+            break
+        # cv2.circle(im,(int(ix*coef),int(iy*coef)),5,(0,255,255),3)
+        try: res = requests.get(address + route) 
+        except: continue
+        xyz = res.json()
+        ix,iy = int(xyz['x']/10),int(xyz['y']/10)
+        iy = 600 - iy
+        theta = int(xyz['z'])/180*3.14
+        xa[i] = ix
+        ya[i] = iy
+        if ix<=0 or iy <= 0 or ix >= col or iy >= row:
+            audioPlayer.case = "knock"
+            pass
+        else:
+            # b,theta = finger.touchMoved(ix,iy)
+            b,_ = finger.touchMoved(ix,iy)
+            pix = gray[iy,ix]
+            if b :
+                ix = int(np.mean(xa))
+                iy = int(np.mean(ya))
+                # ix2 = int(finger.x0)
+                # iy2 = int(finger.y0)
+                print(ix,iy)
+                cv2.circle(im,(ix,iy),7,(0,0,255),3)
+                # cv2.circle(im,(ix2,iy2),3,(0,255,0),1)
+                if pix > 250:
+                    ix3,iy3 = find_nearest_barrier(gray,ix,iy,theta,thrsh = 250)
+                    cv2.circle(im,(ix3,iy3),5,(0,200,0),2)
+                    dx,dy = (ix3-ix), (iy3-iy)
+                    d = sqrt(dx*dx + dy*dy)
+                    audioPlayer.case = "beep"
+                    audioPlayer.freq = param.getFreq(d)
+                else: audioPlayer.case = "silent"
+                # im = cv2.flip(im,1)
+                coef = 1.0
+                im = cv2.resize(im, (int(row*coef),int(col*coef)), interpolation = cv2.INTER_AREA)
+ 
+                cv2.imshow('im',im)
 
-while True:
-    im = im0.copy()
-    c = cv2.waitKey(5)
-    if c == 27:
-        break
-    # cv2.circle(im,(int(ix*coef),int(iy*coef)),5,(0,255,255),3)
-    try: res = requests.get(address + route) 
-    except: continue
-    xyz = res.json()
-    ix,iy = int(xyz['x']/10),int(xyz['y']/10)
-    if ix<=0 or iy <= 0 or ix >= col or iy >= row:
-        audioPlayer.case = "knock"
-        pass
-    else:
-        b,theta = finger.touchMoved(ix,iy)
-        pix = gray[iy,ix]
-        if b :
-            ix = int(ix*coef)
-            iy = int(iy*coef)
-            ix2 = int(finger.x0*coef)
-            iy2 = int(finger.y0*coef)
-            print(ix,iy)
-            cv2.circle(im,(ix,iy),5,(0,0,255),2)
-            cv2.circle(im,(ix2,iy2),3,(0,255,0),1)
-            if pix > 250:
-                ix3,iy3 = find_nearest_barrier(gray,ix,iy,theta,thrsh = 250)
-                cv2.circle(im,(ix3,iy3),3,(255,0,0),1)
-                dx,dy = (ix3-ix)/coef, (iy3-iy)/coef
-                d = sqrt(dx*dx + dy*dy)
-                audioPlayer.case = "beep"
-                audioPlayer.freq = param.getFreq(d)
-            else: audioPlayer.case = "silent"
-    cv2.imshow('im',im)
+    print(100/(time()-t0))
 
-print(100/(time()-t0))
-cv2.waitKey(0)
+if __name__ == "__main__":
+    main()

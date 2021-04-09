@@ -9,7 +9,7 @@ of the Pozyx device both locally and remotely. Follow the steps to correctly set
 parameters and upload this sketch. Watch the coordinates change as you move your device around!
 """
 from time import sleep
-
+from pypozyx import SensorData
 from pypozyx import (POZYX_POS_ALG_UWB_ONLY, POZYX_3D, Coordinates, POZYX_SUCCESS, PozyxConstants, version,
                      DeviceCoordinates, PozyxSerial, get_first_pozyx_serial_port, SingleRegister, DeviceList, PozyxRegisters)
 # from pythonosc.udp_client import SimpleUDPClient
@@ -51,11 +51,13 @@ class ReadyToLocalize(object):
     def loop(self):
         """Performs positioning and displays/exports the results."""
         position = Coordinates()
+        sensor_data = SensorData()
         status = self.pozyx.doPositioning(
             position, self.dimension, self.height, self.algorithm, remote_id=self.remote_id)
-        if status == POZYX_SUCCESS:
+        status2 = self.pozyx.getAllSensorData(sensor_data, remote_id=self.remote_id)
+        if status == POZYX_SUCCESS and status2 == True:
             # self.printPublishPosition(position)
-            return position
+            return position,sensor_data
         else:
             return "error in localizing"
 
@@ -99,10 +101,14 @@ def main(remote_id = 0x6a37, check_pypozyx_version = True):
     #            DeviceCoordinates(0x606f, 1, Coordinates(2160, 3050, 1540))] 
     # id_xyz = [(0x6a6f,10,2520,0),(0x6a35,2810,50,0),(0x6a31,5460,3030,0),(0x6a60,2510,4750,0)]
 
-    anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(5460,   3030,   1540)),
-               DeviceCoordinates(0x6a60, 1, Coordinates(2510,   4750,   1540)),
-               DeviceCoordinates(0x6a35, 1, Coordinates(2810,   50,     1540)),
-               DeviceCoordinates(0x606f, 1, Coordinates(10,     2520,   1540))]
+    # anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(5460,   3030,   1540)),
+    #            DeviceCoordinates(0x6a60, 1, Coordinates(2510,   4750,   1540)),
+    #            DeviceCoordinates(0x6a35, 1, Coordinates(2810,   50,     1540)),
+    #            DeviceCoordinates(0x606f, 1, Coordinates(10,     2520,   1540))]
+    anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(6000,   3000,   1540)),
+               DeviceCoordinates(0x6a60, 1, Coordinates(3000,   6000,   1540)),
+               DeviceCoordinates(0x6a35, 1, Coordinates(3000,  0,     1540)),
+               DeviceCoordinates(0x606f, 1, Coordinates(0,     3000,   1540))]
 
     # positioning algorithm to use, other is PozyxConstants.POSITIONING_ALGORITHM_TRACKING
     algorithm = PozyxConstants.POSITIONING_ALGORITHM_UWB_ONLY
@@ -117,12 +123,15 @@ def main(remote_id = 0x6a37, check_pypozyx_version = True):
     from time import time
     for _ in range(5000):
         t = time()
-        pos = r.loop()
+        try:
+            pos,sensor_data = r.loop()
+            heading = int(sensor_data.euler_angles.heading)
+        except: continue
 
-        try: _ = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': 0}) 
+        try: _ = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': heading}) 
         except: pass
 
-        try:print("0x%0.4x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} ".format(time()-t,pos.x,pos.y ))
+        try:print("0x%0.4x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} heading: {} ".format(time()-t,pos.x,pos.y,heading ))
         except: pass
 
 if __name__ == "__main__":
