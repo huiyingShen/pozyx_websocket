@@ -77,7 +77,8 @@ class ReadyToLocalize(object):
             self.pozyx.saveRegisters([PozyxRegisters.POSITIONING_NUMBER_OF_ANCHORS], remote_id=self.remote_id)
         return status
 
-def main(remote_id = 0x6a37, check_pypozyx_version = True):
+def main(send_conn, remote_id = 0x6a37, check_pypozyx_version = True):
+# def main( remote_id = 0x6a37, check_pypozyx_version = True):
     import requests
 
     # Check for the latest PyPozyx version. Skip if this takes too long or is not needed by setting to False.
@@ -126,13 +127,15 @@ def main(remote_id = 0x6a37, check_pypozyx_version = True):
         try:
             pos,sensor_data = r.loop()
             heading = int(sensor_data.euler_angles.heading)
+            # send_conn.send((pox.x,pos.y,heading))
         except: continue
 
-        try: _ = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': heading}) 
-        except: pass
+        # try: _ = requests.post('http://127.0.0.1:8000/xyz', data ={'x':int(pos.x),'y':int(pos.y),'z': heading}) 
+        # except: pass
 
         try:print("0x%0.4x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} heading: {} ".format(time()-t,pos.x,pos.y,heading ))
         except: pass
+        send_conn.send((pos.x,pos.y,heading))
 
 if __name__ == "__main__":
     main()

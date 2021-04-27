@@ -3,6 +3,7 @@ from time import sleep
 import numpy as np
 import tkinter
 import sound_plot
+import localize_new
 
 class Dummy:
     def __init__(self):
@@ -12,11 +13,20 @@ class Dummy:
     def one_step(self):
         sleep(0.01)
         self.x += np.random.random()*10 - 3
-        self.y += np.random.random() - 2
+        self.y += np.random.random()*10 - 2
         self.theta += np.random.random()*10
         self.theta = self.theta%360
 
 
+ 
+def target(send_conn):
+    # dummy = Dummy()
+    # for _ in range(100):
+    #     dummy.one_step()
+    #     send_conn.send((dummy.x,dummy.y,dummy.theta))
+    localize_new.main(send_conn)
+    send_conn.send((-1,-1,0))
+    send_conn.close()
 
 class Controller:
     def __init__(self):
@@ -46,7 +56,8 @@ class Controller:
             except: pass
 
     def go(self):
-        p1 = Process(target=self.target_f)
+        # p1 = Process(target=self.target_f)
+        p1 = Process(target=target, args=(self.send_conn,))
         p1.start()
         sound_plot.main(self.recv_conn,fn_im="image0.png")
         p1.join() 
