@@ -49,23 +49,26 @@ class PozyxParam:
         self.freqLow = 300.0
         self.freqHigh = 1000.0
         self.distMax = 600.0  
+        self.alpha = 1.0
 
     def getFreq(self, d):
         f1 = self.freqLow
         f2 = self.freqHigh
         if self.isHigh2Low:
-            f2 = self.freqLow
-            f1 = self.freqHigh
+            f1,f2 = f2,f1
         
         if self.isExp: return self.freq_exp(d, f1, f2)
         else: return self.freq_linear(d,f1, f2)
+
+    def getScaledD(self,d):
+        return pow(d/self.distMax,self.alpha)
     
     def  freq_linear(self,d, f_min, f_max):
-        return f_min + (f_max-f_min)*(d/self.distMax)
+        return f_min + (f_max-f_min)*self.getScaledD(d)
     
 
     def freq_exp(self,d, f_min, f_max):
-        return f_min*pow(f_max/f_min,d/self.distMax)
+        return f_min*pow(f_max/f_min,self.getScaledD(d))
     
 
 @jit(nopython=True)
