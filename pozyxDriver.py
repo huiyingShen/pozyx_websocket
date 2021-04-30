@@ -10,7 +10,7 @@ from sound_plot import PozyxParam
 
 def target(send_conn):
     localize_new.test0(send_conn)
-    send_conn.close()
+    # send_conn.close()
     print("pipe closed, ...")
 
 

@@ -8,7 +8,7 @@ This tutorial requires at least the contents of the Pozyx Ready to Localize kit.
 of the Pozyx device both locally and remotely. Follow the steps to correctly set up your environment in the link, change the
 parameters and upload this sketch. Watch the coordinates change as you move your device around!
 """
-from time import sleep
+from time import sleep,time
 from pypozyx import SensorData
 from pypozyx import (POZYX_POS_ALG_UWB_ONLY, POZYX_3D, Coordinates, POZYX_SUCCESS, PozyxConstants, version,
                      DeviceCoordinates, PozyxSerial, get_first_pozyx_serial_port, SingleRegister, DeviceList, PozyxRegisters)
@@ -76,6 +76,30 @@ class ReadyToLocalize(object):
             self.pozyx.saveAnchorIds(remote_id=self.remote_id)
             self.pozyx.saveRegisters([PozyxRegisters.POSITIONING_NUMBER_OF_ANCHORS], remote_id=self.remote_id)
         return status
+
+done = False
+tMax = 5*60
+
+def test0(send_conn, remote_id = 0x6a37, check_pypozyx_version = True):
+    import numpy as np
+    global done, tMax
+
+    t0 = time()
+    x,y,theta = 100.1,200.2,0
+    while not done and time() - t0 <tMax:
+        print("done = ",done)
+        sleep(0.999)
+        x += np.random.random()*10 - 3
+        y += np.random.random()*10 - 2
+        theta += np.random.random()*10
+        theta = theta%360
+        send_conn.send((x,y,theta))
+        # s = "{:6.3f}  {:6.3f} {:6.3f}  ".format(x,y,theta)
+
+    print("done = ",done)
+    send_conn.close()
+
+
 
 def main(send_conn, remote_id = 0x6a37, check_pypozyx_version = True):
 # def main( remote_id = 0x6a37, check_pypozyx_version = True):
