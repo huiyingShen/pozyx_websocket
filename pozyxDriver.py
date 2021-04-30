@@ -1,4 +1,4 @@
-from multiprocessing import Process, Pipe
+from multiprocessing import Process, Pipe, Value
 from time import sleep
 import numpy as np
 import tkinter
@@ -8,8 +8,8 @@ import localize_new
 
 from sound_plot import PozyxParam
 
-def target(send_conn):
-    localize_new.test0(send_conn)
+def target(send_conn, done, tMax,):
+    localize_new.main(send_conn, done, tMax)
     # send_conn.close()
     print("pipe closed, ...")
 
@@ -98,9 +98,6 @@ class Param_GUI(PozyxParam):
         print("self.alpha  = {}".format(self.alpha) )
         # print("go!")
 
-class Status:
-    def __init__(self):
-        self.done = False
 
 class Driver:
 
@@ -108,8 +105,6 @@ class Driver:
         self.root = Tk()
         window = Frame(self.root,width=320,height=400)
         window.pack()
-
-        self.status = Status()
 
         self.t = Trial(window, y = 0)  
         self.p = Param_GUI(window, y = 80)
@@ -122,9 +117,11 @@ class Driver:
         self.window = window
 
         self.recv_conn, self.send_conn = Pipe()
+        self.done = Value('i',0)
+        self.fn = "doe.txt"
  
     def start1(self):
-        self.status.done = False
+        self.done.value = 0
         import time as time0
         from time import time,sleep
         t0 = time()
@@ -137,7 +134,7 @@ class Driver:
         Label(self.window, text="Data File: "+self.fn, fg='blue',font=("Helvetica", 10)).place(x=50,y=330)
         sec0 = self.t.min*60
         sec = sec0
-        while sec >0 and not self.status.done:
+        while sec >0 and self.done.value == 0:
             sleep(1)
             dt = time() - t0
             sec = int(sec0 - dt)
@@ -147,7 +144,7 @@ class Driver:
             print("%02i:%02i" % (mm, ss))
             self.timer.update()
 
-        self.status.done = True  # time runs out
+        self.done.value = 1  # time runs out
 
     def start(self):
         import threading
@@ -156,27 +153,24 @@ class Driver:
 
     def stop(self):
         print("stop")
-        self.status.done = True
+        self.done.value = 1
 
     def start_proc(self):
         import threading
         threading.Thread(target=self.start1).start()
 
-        localize_new.tMax = self.t.min
 
-        self.p = Process(target=target, args=(self.send_conn,))
-        self.p.start()
-        threading.Thread(target=sound_plot.main, args=(self.recv_conn,"image0.png",)).start()
+        self.proc = Process(target=target, args=(self.send_conn,self.done,self.t.min,))
+        self.proc.start()
+        threading.Thread(target=sound_plot.main, args=(self.recv_conn, self.done, "image0.png",self.fn,)).start()
+        # sound_plot.main(self.recv_conn, self.done, "image0.png",self.fn)
         # sound_plot.main(self.recv_conn,fn_im="image0.png")
         
 
     def stop_proc(self):
         print("stop,...")
-        localize_new.done = True
-        self.status.done = True
-        sound_plot.done = True
-        # self.recv_conn.close()
-        self.p.join() 
+        self.done.value = 1
+        self.proc.join() 
         print("stop!!!")
 
 

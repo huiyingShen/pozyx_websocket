@@ -109,10 +109,10 @@ class OneFingerTouch:
             self.y0 += (d - self.d2Follow)*sin(self.theta)
         return True,self.theta
 
-done = False
-fn = "doe.txt"
-def main(recv_conn, fn_im = 'image00.png'):
-    im0 = cv2.imread('image00.png')
+
+def main(recv_conn, done, fn_im, fn_out):
+    print("fn_im, fn_out: ", fn_im, fn_out)
+    im0 = cv2.imread(fn_im)
     gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
 
 
@@ -134,9 +134,8 @@ def main(recv_conn, fn_im = 'image00.png'):
     ya = np.array([0]*sz)
     
     i = 0
-    global done, fn
-    f = open(fn,"w")
-    while not done:
+    f = open(fn_out,"w")
+    while done.value == 0:
         i = (i+1)%sz
         im = im0.copy()
         c = cv2.waitKey(5)
@@ -184,3 +183,4 @@ def main(recv_conn, fn_im = 'image00.png'):
     print(100/(time()-t0))
     audioPlayer.case = "silent"
     f.close()
+    cv2.waitKey(0)
