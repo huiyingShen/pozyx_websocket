@@ -6,9 +6,8 @@ from tkinter import Tk,Frame,Button,Label,Entry,Radiobutton,IntVar,END,StringVar
 import sound_plot
 import localize_new
 
-from sound_plot import PozyxParam
-
 def target(send_conn, done, tMax,):
+    print("target(), tMax = {}".format(tMax))
     localize_new.main(send_conn, done, tMax)
     # send_conn.close()
     print("pipe closed, ...")
@@ -37,6 +36,36 @@ class Trial:
         self.min = int(self.minE.get())
         print("self.subjName  = {}".format(self.subjName) )
         print("self.min  = {}".format(self.min) )
+
+class PozyxParam:
+    def __init__(self):
+        self.isExp = True
+        self.isHigh2Low = True
+        self.freqLow = 300.0
+        self.freqHigh = 1000.0
+        self.distMax = 600.0  
+        self.alpha = 0.5
+
+    def getFreq(self, d):
+        f1 = self.freqLow
+        f2 = self.freqHigh
+        if self.isHigh2Low:
+            f1,f2 = f2,f1
+
+        coef = 2.0  # quick fix by Christopher 
+        if self.isExp: return self.freq_exp(d, f1, f2)*coef
+        else: return self.freq_linear(d,f1, f2)*coef
+
+    def getScaledD(self,d):
+        print("getScaledD, alpha = ",self.alpha)
+        return pow(d/self.distMax,self.alpha)
+    
+    def  freq_linear(self,d, f_min, f_max):
+        return f_min + (f_max-f_min)*self.getScaledD(d)
+    
+
+    def freq_exp(self,d, f_min, f_max):
+        return f_min*pow(f_max/f_min,self.getScaledD(d))        
         
 class Param_GUI(PozyxParam):
     def __init__(self, window, y = 0):
@@ -159,10 +188,10 @@ class Driver:
         import threading
         threading.Thread(target=self.start1).start()
 
-
-        self.proc = Process(target=target, args=(self.send_conn,self.done,self.t.min,))
+        tMax = self.t.min*60    # min to sec
+        self.proc = Process(target=target, args=(self.send_conn,self.done,tMax,))
         self.proc.start()
-        threading.Thread(target=sound_plot.main, args=(self.recv_conn, self.done, "image0.png",self.fn,)).start()
+        threading.Thread(target=sound_plot.main, args=(self.recv_conn, self.done, self.p,"image0.png",self.fn,)).start()
         # sound_plot.main(self.recv_conn, self.done, "image0.png",self.fn)
         # sound_plot.main(self.recv_conn,fn_im="image0.png")
         

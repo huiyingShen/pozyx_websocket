@@ -143,7 +143,7 @@ def main(send_conn, done, tMax, remote_id = 0x6a37, check_pypozyx_version = True
         t = time()
         try:
             pos,sensor_data = r.loop()
-            heading = int(sensor_data.euler_angles.heading)
+            heading = int(sensor_data.euler_angles.heading) - 327 # add offset
         except: continue
 
         try:print("0x%0.4x"%remote_id, " dt: {:6.4f}, x(mm): {} y(mm): {} heading: {} ".format(time()-t,pos.x,pos.y,heading ))

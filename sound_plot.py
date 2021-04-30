@@ -41,34 +41,6 @@ class AudioPlayer:
                 
     def go(self):
         threading.Thread(target=self.loop).start()
-
-class PozyxParam:
-    def __init__(self):
-        self.isExp = True
-        self.isHigh2Low = True
-        self.freqLow = 300.0
-        self.freqHigh = 1000.0
-        self.distMax = 600.0  
-        self.alpha = 1.0
-
-    def getFreq(self, d):
-        f1 = self.freqLow
-        f2 = self.freqHigh
-        if self.isHigh2Low:
-            f1,f2 = f2,f1
-        
-        if self.isExp: return self.freq_exp(d, f1, f2)
-        else: return self.freq_linear(d,f1, f2)
-
-    def getScaledD(self,d):
-        return pow(d/self.distMax,self.alpha)
-    
-    def  freq_linear(self,d, f_min, f_max):
-        return f_min + (f_max-f_min)*self.getScaledD(d)
-    
-
-    def freq_exp(self,d, f_min, f_max):
-        return f_min*pow(f_max/f_min,self.getScaledD(d))
     
 
 @jit(nopython=True)
@@ -110,7 +82,7 @@ class OneFingerTouch:
         return True,self.theta
 
 
-def main(recv_conn, done, fn_im, fn_out):
+def main(recv_conn, done, param, fn_im, fn_out):
     print("fn_im, fn_out: ", fn_im, fn_out)
     im0 = cv2.imread(fn_im)
     gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
@@ -125,7 +97,7 @@ def main(recv_conn, done, fn_im, fn_out):
     t0 = time()
     finger = OneFingerTouch()
     audioPlayer = AudioPlayer()
-    param = PozyxParam()
+    
 
     audioPlayer.case = "silent"
     audioPlayer.go()
@@ -181,6 +153,6 @@ def main(recv_conn, done, fn_im, fn_out):
  
                 cv2.imshow('im',im)
     print(100/(time()-t0))
-    audioPlayer.case = "silent"
+    audioPlayer.case = "quit"
     f.close()
     cv2.waitKey(0)
