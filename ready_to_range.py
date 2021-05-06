@@ -63,16 +63,18 @@ class ReadyToRange(object):
             self.destination_id, device_range, self.remote_id)
         if status == POZYX_SUCCESS:
             print(device_range)
+            return device_range
             if self.ledControl(device_range.distance) == POZYX_FAILURE:
                 print("ERROR: setting (remote) leds")
-        else:
-            error_code = SingleRegister()
-            status = self.pozyx.getErrorCode(error_code)
-            if status == POZYX_SUCCESS:
-                print("ERROR Ranging, local %s" %
-                      self.pozyx.getErrorMessage(error_code))
-            else:
-                print("ERROR Ranging, couldn't retrieve local error")
+        # else:
+        #     error_code = SingleRegister()
+        #     status = self.pozyx.getErrorCode(error_code)
+        #     if status == POZYX_SUCCESS:
+        #         print("ERROR Ranging, local %s" %
+        #               self.pozyx.getErrorMessage(error_code))
+        #     else:
+        #         print("ERROR Ranging, couldn't retrieve local error")
+        return None
 
     def ledControl(self, distance):
         """Sets LEDs according to the distance between two devices"""
@@ -86,15 +88,14 @@ class ReadyToRange(object):
             status &= self.pozyx.setLed(1, (distance < 4 * range_step_mm), id)
         return status
 
-
-if __name__ == "__main__":
-    # Check for the latest PyPozyx version. Skip if this takes too long or is not needed by setting to False.
+def test0(remote_id=None, destination_id = 0x6a35, nIter = 1000):
+   # Check for the latest PyPozyx version. Skip if this takes too long or is not needed by setting to False.
     check_pypozyx_version = True
     if check_pypozyx_version:
         perform_latest_version_check()
 
     # hardcoded way to assign a serial port of the Pozyx
-    serial_port = 'COM6'
+    # serial_port = 'COM6'
 
     # the easier way
     serial_port = get_first_pozyx_serial_port()
@@ -102,14 +103,14 @@ if __name__ == "__main__":
         print("No Pozyx connected. Check your USB cable or your driver!")
         quit()
 
-    remote_id = 0x6a37           # the network ID of the remote device
-    remote = True               # whether to use the given remote device for ranging
-    if not remote:
-        remote_id = None
+    # remote_id = 0x6a37           # the network ID of the remote device
+    # remote = True               # whether to use the given remote device for ranging
+    # if not remote:
+    # remote_id = None
 
-    destination_id = 0x6a6f      # network ID of the ranging destination
+    # destination_id = 0x6a35      # network ID of the ranging destination
     # distance that separates the amount of LEDs lighting up.
-    range_step_mm = 1000
+    range_step_mm = 10
 
     # the ranging protocol, other one is PozyxConstants.RANGE_PROTOCOL_PRECISION
     ranging_protocol = PozyxConstants.RANGE_PROTOCOL_PRECISION
@@ -119,5 +120,28 @@ if __name__ == "__main__":
                      ranging_protocol, remote_id)
     r.setup()
     print('done setup')
-    for i in range(10):
-        r.loop()
+    for _ in range(nIter):
+        out = r.loop()
+        if out is not None:
+            print(out)
+            return out
+
+def test1():
+    anchors = [(0x6a31, 6000,   3000,   1200),
+               (0x6a60, 3000,   6000,   1200),
+               (0x6a35, 3000,   0,      1200),
+               (0x6a6f, 0,      3000,   1200),
+               (0x6a6e, 1580,   3500,   2380),]
+    output = []
+    for id,x,y,x in anchors:
+        # print(anchor)
+        # id,x,y,x
+        print("0x%0.4x"%id)
+        o = test0(remote_id = 0x6a37, destination_id = id, nIter = 1000)
+        output.append((id,o))
+    for id,o in output:
+        print("0x%0.4x"%id, o)
+
+if __name__ == "__main__":
+    # test0(remote_id=0x6a37, destination_id = 0x6a)
+    test1()

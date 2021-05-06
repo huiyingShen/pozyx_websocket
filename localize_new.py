@@ -123,8 +123,8 @@ def main(send_conn, done, tMax, remote_id = 0x6a37, check_pypozyx_version = True
     anchors = [DeviceCoordinates(0x6a31, 1, Coordinates(6000,   3000,   1200)),
                DeviceCoordinates(0x6a60, 1, Coordinates(3000,   6000,   1200)),
                DeviceCoordinates(0x6a35, 1, Coordinates(3000,   0,      1200)),
-               DeviceCoordinates(0x606f, 1, Coordinates(0,      3000,   1200)),
-               DeviceCoordinates(0x606e, 1, Coordinates(0,      6000,   2300)),]
+               DeviceCoordinates(0x6a6f, 1, Coordinates(0,      3000,   1200)),
+               DeviceCoordinates(0x6a6e, 1, Coordinates(1580,     3500,   2380)),]
 
     # positioning algorithm to use, other is PozyxConstants.POSITIONING_ALGORITHM_TRACKING
     algorithm = PozyxConstants.POSITIONING_ALGORITHM_UWB_ONLY

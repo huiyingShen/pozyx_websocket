@@ -101,7 +101,7 @@ def main(recv_conn, done, param, fn_im, fn_out):
 
     audioPlayer.case = "silent"
     audioPlayer.go()
-    sz = 10
+    sz = 1
     xa = np.array([0]*sz)
     ya = np.array([0]*sz)
     
