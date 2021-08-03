@@ -18,7 +18,7 @@ class Dummy:
 
 
 class UiCanvasApp:
-    def __init__(self,im_fn = "image0.png"):
+    def __init__(self,im_fn = "image00.png"):
         self.root = tkinter.Tk()
         self.get_image(im_fn)
         self.set_gui()

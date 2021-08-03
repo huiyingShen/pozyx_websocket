@@ -106,8 +106,42 @@ class OneFingerTouch:
             self.y0 += (d - self.d2Follow)*sin(self.theta)
         return True,self.theta
 
-def main():
-    im0 = cv2.imread('image00.png')
+
+def oneStep(audioPlayer,finger,param,im,gray,xa,ya,ix,iy,theta,i):
+    row,col,_ = im.shape
+    xa[i] = ix
+    ya[i] = iy
+    if ix<=0 or iy <= 0 or ix >= col or iy >= row:
+        audioPlayer.case = "knock"
+        pass
+    else:
+        # b,theta = finger.touchMoved(ix,iy)
+        b,_ = finger.touchMoved(ix,iy)
+        pix = gray[iy,ix]
+        if b :
+            ix = int(np.mean(xa))
+            iy = int(np.mean(ya))
+            # ix2 = int(finger.x0)
+            # iy2 = int(finger.y0)
+            print(ix,iy)
+            cv2.circle(im,(ix,iy),7,(0,0,255),3)
+            # cv2.circle(im,(ix2,iy2),3,(0,255,0),1)
+            if pix > 250:
+                ix3,iy3 = find_nearest_barrier(gray,ix,iy,theta,thrsh = 250)
+                cv2.circle(im,(ix3,iy3),5,(0,200,0),2)
+                dx,dy = (ix3-ix), (iy3-iy)
+                d = sqrt(dx*dx + dy*dy)
+                audioPlayer.case = "beep"
+                audioPlayer.freq = param.getFreq(d)
+            else: audioPlayer.case = "silent"
+            # im = cv2.flip(im,1)
+            coef = 1.0
+            im = cv2.resize(im, (int(row*coef),int(col*coef)), interpolation = cv2.INTER_AREA)
+
+            cv2.imshow('im',im)
+
+def main(fn = 'image00.png'):
+    im0 = cv2.imread(fn)
     gray = cv2.cvtColor(im0,cv2.COLOR_BGR2GRAY)
 
 
@@ -145,38 +179,65 @@ def main():
         ix,iy = int(xyz['x']/10),int(xyz['y']/10)
         iy = 600 - iy
         theta = int(xyz['z'])/180*3.14
-        xa[i] = ix
-        ya[i] = iy
-        if ix<=0 or iy <= 0 or ix >= col or iy >= row:
-            audioPlayer.case = "knock"
-            pass
-        else:
-            # b,theta = finger.touchMoved(ix,iy)
-            b,_ = finger.touchMoved(ix,iy)
-            pix = gray[iy,ix]
-            if b :
-                ix = int(np.mean(xa))
-                iy = int(np.mean(ya))
-                # ix2 = int(finger.x0)
-                # iy2 = int(finger.y0)
-                print(ix,iy)
-                cv2.circle(im,(ix,iy),7,(0,0,255),3)
-                # cv2.circle(im,(ix2,iy2),3,(0,255,0),1)
-                if pix > 250:
-                    ix3,iy3 = find_nearest_barrier(gray,ix,iy,theta,thrsh = 250)
-                    cv2.circle(im,(ix3,iy3),5,(0,200,0),2)
-                    dx,dy = (ix3-ix), (iy3-iy)
-                    d = sqrt(dx*dx + dy*dy)
-                    audioPlayer.case = "beep"
-                    audioPlayer.freq = param.getFreq(d)
-                else: audioPlayer.case = "silent"
-                # im = cv2.flip(im,1)
-                coef = 1.0
-                im = cv2.resize(im, (int(row*coef),int(col*coef)), interpolation = cv2.INTER_AREA)
- 
-                cv2.imshow('im',im)
+        oneStep(audioPlayer,finger,param,im,gray,xa,ya,ix,iy,theta,i)
 
     print(100/(time()-t0))
 
+class PozClient:
+    t0 = time()
+    finger = OneFingerTouch()
+    audioPlayer = AudioPlayer()
+    param = PozyxParam()
+
+    audioPlayer.case = "silent"
+    audioPlayer.go()
+    sz = 10
+    xa = np.array([0]*sz)
+    ya = np.array([0]*sz)
+    
+    def __init__(self,fn = "image00.png"):
+        self.im0 = cv2.imread(fn)
+        self.gray = cv2.cvtColor(self.im0,cv2.COLOR_BGR2GRAY)
+        self.row,self.col,_ = self.im0.shape
+        # cv2.imshow('im0',self.im0)
+
+    def oneStep(self,xf,yf,theta,i):
+        i = i%self.sz
+        im = self.im0.copy()
+        self.xa[i] = xf
+        self.ya[i] = yf
+        print("xf, yf = {},{}".format(xf,yf))
+        if xf<=0 or yf <= 0 or xf >= self.col or yf >= self.row:
+            self.audioPlayer.case = "knock"
+            pass
+        else:
+            ix = int(np.mean(self.xa))
+            iy = int(np.mean(self.ya))
+            pix = self.gray[iy,ix]
+            # ix2 = int(finger.x0)
+            # iy2 = int(finger.y0)
+            print(ix,iy)
+            cv2.circle(im,(ix,iy),7,(0,0,255),3)
+            # cv2.circle(im,(ix2,iy2),3,(0,255,0),1)
+            if pix > 250:
+                ix3,iy3 = find_nearest_barrier(self.gray,ix,iy,theta,thrsh = 250)
+                cv2.circle(im,(ix3,iy3),5,(0,200,0),2)
+                dx,dy = (ix3-ix), (iy3-iy)
+                d = sqrt(dx*dx + dy*dy)
+                self.audioPlayer.case = "beep"
+                self.audioPlayer.freq = self.param.getFreq(d)
+            else: self.audioPlayer.case = "silent"
+            # im = cv2.flip(im,1)
+            coef = 1.0
+            im = cv2.resize(im, (int(self.row*coef),int(self.col*coef)), interpolation = cv2.INTER_AREA)
+        return im
+                # cv2.imshow('im',im)
+
+    def test0(self):
+        cv2.waitKey(0)
+        return self
+
+
 if __name__ == "__main__":
     main()
+    # PozClient().test0()

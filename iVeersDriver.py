@@ -1,16 +1,55 @@
-from multiprocessing import Process, Pipe, Value
 from time import sleep
 import numpy as np
 import tkinter
 from tkinter import Tk,Frame,Button,Label,Entry,Radiobutton,IntVar,END,StringVar
 import sound_plot
-# import localize_new
 
-def target(send_conn, done, tMax,):
-    print("target(), tMax = {}".format(tMax))
-    # localize_new.main(send_conn, done, tMax)
-    # send_conn.close()
-    print("pipe closed, ...")
+# from simple_websocket_server import WebSocketServer, WebSocket
+from SimpleWebSocketServer import SimpleWebSocketServer, WebSocket
+import threading
+from time import sleep
+
+from client_new import PozClient
+
+started = False
+clients = []
+# pozClient = PozClient().test0()
+class SimpleChat(WebSocket):
+    i = 0
+
+    def handleMessage(self):
+        for client in clients:
+            if client != self:
+                client.sendMessage(self.address[0] + u' - ' + self.data)
+                # print(self.data)
+                # out = self.data.split(' ')
+                # print(out)
+                # try:
+                #     x = float(out[0])*100
+                #     y = float(out[1])*100
+                #     theta = float(out[2])
+                #     ix = int(x) + 300
+                #     iy = int(y) + 300
+                #     self.i += 1
+                #     # self.pozClient.oneStep(ix,iy,theta,self.i)
+                # except:
+                #     print("error parsing x,y,theta")
+
+    def handleConnected(self):
+        print(self.address, 'connected')
+        for client in clients:
+            client.sendMessage(self.address[0] + u' - connected')
+        clients.append(self)
+
+    def handleClose(self):
+       clients.remove(self)
+       print(self.address, 'closed')
+       for client in clients:
+          client.sendMessage(self.address[0] + u' - disconnected')
+
+
+# import websocket
+# class MyWebSocket(websocket.WebSocket):
 
 
 class Trial:
@@ -131,6 +170,8 @@ class Param_GUI(PozyxParam):
 class Driver:
 
     def __init__(self):
+
+        self.pozClient = PozClient()
         self.root = Tk()
         window = Frame(self.root,width=320,height=400)
         window.pack()
@@ -145,12 +186,37 @@ class Driver:
 
         self.window = window
 
-        self.recv_conn, self.send_conn = Pipe()
-        self.done = Value('i',0)
         self.fn = "doe.txt"
+        self.done = False
+
+        port = "8001"
+        server = SimpleWebSocketServer('', int(port), SimpleChat)
+        threading.Thread(target=server.serveforever).start()
+
+        import websocket
+        self.ws = websocket.WebSocket()
+        self.ws.connect("ws://localhost:"+port, origin="local")
+        self.i = 0
  
+    def getMsg(self):
+        while self.done is False:
+            txt = self.ws.recv()
+            print("txt = ", txt)
+            out = txt.split(' ')[2:]
+            print(out)
+            try:
+                x = float(out[0])*100
+                y = float(out[1])*100
+                theta = float(out[2])
+                ix = int(x) + 300
+                iy = int(y) + 300
+                self.i += 1
+                # self.pozClient.oneStep(ix,iy,theta,self.i)
+            except:
+                print("error parsing x,y,theta")
+            
+
     def start1(self):
-        self.done.value = 0
         import time as time0
         from time import time,sleep
         t0 = time()
@@ -163,7 +229,7 @@ class Driver:
         Label(self.window, text="Data File: "+self.fn, fg='blue',font=("Helvetica", 10)).place(x=50,y=330)
         sec0 = self.t.min*60
         sec = sec0
-        while sec >0 and self.done.value == 0:
+        while sec >0 and not self.done:
             sleep(1)
             dt = time() - t0
             sec = int(sec0 - dt)
@@ -173,35 +239,20 @@ class Driver:
             print("%02i:%02i" % (mm, ss))
             self.timer.update()
 
-        self.done.value = 1  # time runs out
+        self.done = True  # time runs out
 
     def start(self):
+        print("start")
+        self.ws.send("Start")
         import threading
         threading.Thread(target=self.start1).start()
-
+        threading.Thread(target=self.getMsg).start()
+        
 
     def stop(self):
         print("stop")
-        self.done.value = 1
-
-    def start_proc(self):
-        import threading
-        threading.Thread(target=self.start1).start()
-
-        tMax = self.t.min*60    # min to sec
-        self.proc = Process(target=target, args=(self.send_conn,self.done,tMax,))
-        self.proc.start()
-        threading.Thread(target=sound_plot.main, args=(self.recv_conn, self.done, self.p,"image0.png",self.fn,)).start()
-        # sound_plot.main(self.recv_conn, self.done, "image0.png",self.fn)
-        # sound_plot.main(self.recv_conn,fn_im="image0.png")
-        
-
-    def stop_proc(self):
-        print("stop,...")
-        self.done.value = 1
-        self.proc.join() 
-        print("stop!!!")
-
+        self.ws.send("End")
+        self.done = True
 
     def go(self, start, stop):
         Button(self.window, text="Start", fg='green', command=start).place(x=70, y=300)    
@@ -212,10 +263,6 @@ class Driver:
 
     def test0(self):
         self.go(self.start,self.stop)
-
-    def test1(self):
-        self.go(self.start_proc,self.stop_proc)
-
 
 if __name__ ==  "__main__":
     Driver().test0()
