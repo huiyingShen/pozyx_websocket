@@ -1,5 +1,5 @@
 from webSocketServerClient import getServer,getClient
-from client_new import PozClient
+from audio_drawing import PozClient
 
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QWidget, QApplication, QLabel, QVBoxLayout,QPushButton
